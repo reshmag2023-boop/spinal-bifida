@@ -1,0 +1,40 @@
+# Spina Bifida Risk Stratification Configuration (SB-RS)
+# Configurable weights, thresholds, and parameters for research decision-support
+
+risk_categories:
+  low:
+    min: 0
+    max: 30
+    label: "LOW"
+    color: "#10B981"
+    description: "Low probability of Spina Bifida features; anatomical morphology within normal limits."
+  moderate:
+    min: 31
+    max: 60
+    label: "MODERATE"
+    color: "#F59E0B"
+    description: "Equivocal or borderline cranial/ventricular markers; targeted repeat ultrasound suggested."
+  high:
+    min: 61
+    max: 100
+    label: "HIGH"
+    color: "#EF4444"
+    description: "Pronounced cranial lemon-sign / transventricular disruption detected; urgent fetal medicine review."
+
+weights:
+  model_probability: 0.35       # Deep learning classifier confidence P(Spina Bifida)
+  cranial_indentation: 0.25     # Frontal bone concavity / lemon sign morphological metric
+  ventricular_dilation: 0.15    # Transventricular hypoechoic area ratio proxy
+  deep_abnormality: 0.15        # Latent feature embedding distance from normal distribution
+  uncertainty_penalty: 0.10     # Epistemic / predictive uncertainty impact
+
+uncertainty:
+  mc_samples: 20                # Number of Monte Carlo Dropout stochastic passes
+  low_threshold: 0.02           # Variance < 0.02 indicates high confidence
+  high_threshold: 0.06          # Variance >= 0.06 indicates high epistemic uncertainty
+  entropy_threshold: 0.60       # Normalized predictive entropy boundary
+
+severity_thresholds:
+  mild: 0.33                    # Morphological deviation score <= 0.33
+  moderate: 0.66                # Morphological deviation score <= 0.66
+  severe: 1.00                  # Morphological deviation score > 0.66

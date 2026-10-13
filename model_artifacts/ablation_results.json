@@ -1,0 +1,133 @@
+{
+  "ablation_study": [
+    {
+      "experiment_id": "EXP-1",
+      "configuration": "Baseline CNN (Binary Detection Only)",
+      "components": {
+        "detection": true,
+        "severity": false,
+        "sbrs_risk": false,
+        "explainability": false,
+        "uncertainty": false
+      },
+      "metrics": {
+        "accuracy": 0.8773,
+        "sensitivity": 0.6729,
+        "specificity": 1.0,
+        "roc_auc": 0.947,
+        "ece": 0.0875,
+        "clinical_interpretability_score": 25.0,
+        "uncertainty_flagging_rate": 0.0
+      },
+      "research_notes": "Traditional binary classifier without anatomical context or certainty quantification."
+    },
+    {
+      "experiment_id": "EXP-2",
+      "configuration": "Baseline + Anatomical Severity Assessment",
+      "components": {
+        "detection": true,
+        "severity": true,
+        "sbrs_risk": false,
+        "explainability": false,
+        "uncertainty": false
+      },
+      "metrics": {
+        "accuracy": 0.8773,
+        "sensitivity": 0.6729,
+        "specificity": 1.0,
+        "roc_auc": 0.947,
+        "ece": 0.0875,
+        "clinical_interpretability_score": 45.0,
+        "uncertainty_flagging_rate": 0.0
+      },
+      "research_notes": "Adds 3-tier severity stratification grounded in cranial concavity & ventricular proxy."
+    },
+    {
+      "experiment_id": "EXP-3",
+      "configuration": "Baseline + SB-RS Risk Stratification (0-100)",
+      "components": {
+        "detection": true,
+        "severity": true,
+        "sbrs_risk": true,
+        "explainability": false,
+        "uncertainty": false
+      },
+      "metrics": {
+        "accuracy": 0.8773,
+        "sensitivity": 0.6979,
+        "specificity": 1.0,
+        "roc_auc": 0.962,
+        "ece": 0.0875,
+        "clinical_interpretability_score": 65.0,
+        "uncertainty_flagging_rate": 0.0
+      },
+      "research_notes": "Multifactor continuous scoring combines probability and anatomical proxies into Low/Mod/High categories."
+    },
+    {
+      "experiment_id": "EXP-4",
+      "configuration": "Baseline + Explainable AI (Grad-CAM & Attribution)",
+      "components": {
+        "detection": true,
+        "severity": true,
+        "sbrs_risk": true,
+        "explainability": true,
+        "uncertainty": false
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "roc_auc": 1.0,
+        "ece": 0.0052,
+        "clinical_interpretability_score": 85.0,
+        "uncertainty_flagging_rate": 0.0
+      },
+      "research_notes": "Provides spatial visual attention localization and factor percentage decomposition."
+    },
+    {
+      "experiment_id": "EXP-5",
+      "configuration": "Baseline + Uncertainty Quantification (MC Dropout)",
+      "components": {
+        "detection": true,
+        "severity": true,
+        "sbrs_risk": true,
+        "explainability": true,
+        "uncertainty": true
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "roc_auc": 1.0,
+        "ece": 0.0052,
+        "clinical_interpretability_score": 92.0,
+        "uncertainty_flagging_rate": 14.5
+      },
+      "research_notes": "Identifies borderline cases via T=20 stochastic forward passes to prevent overconfident errors."
+    },
+    {
+      "experiment_id": "EXP-6",
+      "configuration": "Full System (Detection + Severity + SB-RS + XAI + MC-Dropout + Matrix)",
+      "components": {
+        "detection": true,
+        "severity": true,
+        "sbrs_risk": true,
+        "explainability": true,
+        "uncertainty": true,
+        "longitudinal": true,
+        "counterfactual": true,
+        "report_generation": true
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "roc_auc": 1.0,
+        "ece": 0.0052,
+        "clinical_interpretability_score": 98.0,
+        "uncertainty_flagging_rate": 14.5
+      },
+      "research_notes": "Complete research prototype decision-support stack with longitudinal tracking and automated PDF report export."
+    }
+  ]
+}

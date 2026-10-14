@@ -44,6 +44,12 @@ def load_cached_model(model_name: str = "resnet18"):
     elif model_name == "efficientnet_b0":
         model = SpinaBifidaEfficientNet(pretrained=True)
         weights_path = ARTIFACTS_DIR / "spina_bifida_efficientnet_b0.pt"
+    elif model_name in ["vit_transformer", "vit_b_16"]:
+        from models.vit_model import SpinaBifidaViT
+        model = SpinaBifidaViT(pretrained=True)
+        weights_path = ARTIFACTS_DIR / "spina_bifida_vit_transformer.pt"
+        if not weights_path.exists():
+            weights_path = ARTIFACTS_DIR / "spina_bifida_vit.pt"
     else:
         model = SpinaBifidaResNet(backbone="resnet18", pretrained=True)
         weights_path = ARTIFACTS_DIR / "spina_bifida_resnet18.pt"
@@ -62,8 +68,18 @@ def render_page_analyzer():
     
     # Sidebar options
     st.sidebar.markdown("### ⚙️ Diagnostic Settings")
-    model_choice = st.sidebar.selectbox("Active Deep Learning Architecture", ["resnet18", "custom_cnn", "efficientnet_b0"], index=0)
-    cam_method = st.sidebar.selectbox("Explainability Method", ["Grad-CAM", "Grad-CAM++"], index=0)
+    model_choice = st.sidebar.selectbox(
+        "Active Deep Learning Architecture", 
+        ["resnet18", "vit_transformer", "custom_cnn", "efficientnet_b0"], 
+        index=0
+    )
+    
+    is_vit = model_choice in ["vit_transformer", "vit_b_16"]
+    if is_vit:
+        explain_method = st.sidebar.selectbox("Explainability Method", ["ViT Self-Attention Map", "ViT Attention Rollout"], index=0)
+    else:
+        explain_method = st.sidebar.selectbox("Explainability Method", ["Grad-CAM", "Grad-CAM++"], index=0)
+        
     mc_samples = st.sidebar.slider("Monte Carlo Dropout Samples (T)", min_value=5, max_value=40, value=20, step=5)
     gestational_week = st.sidebar.number_input("Gestational Age (Weeks)", min_value=12, max_value=38, value=20)
     
@@ -75,13 +91,15 @@ def render_page_analyzer():
     explainer = RiskFactorExplainer()
     cf_analyzer = CounterfactualAnalyzer()
     
-    # Target layer for Grad-CAM
-    if hasattr(model, "get_target_layer_for_gradcam"):
-        target_layer = model.get_target_layer_for_gradcam()
+    # Target layer for Grad-CAM (if CNN)
+    if not is_vit:
+        if hasattr(model, "get_target_layer_for_gradcam"):
+            target_layer = model.get_target_layer_for_gradcam()
+        else:
+            target_layer = model.conv4
+        gradcam_engine = GradCAMPlusPlus(model, target_layer) if explain_method == "Grad-CAM++" else GradCAM(model, target_layer)
     else:
-        target_layer = model.conv4
-        
-    gradcam_engine = GradCAMPlusPlus(model, target_layer) if cam_method == "Grad-CAM++" else GradCAM(model, target_layer)
+        gradcam_engine = None
     
     # 1. Ultrasound Input Selection
     st.markdown("#### 1. Input Ultrasound Selection")
@@ -152,8 +170,14 @@ def render_page_analyzer():
         # 5. SB-RS Risk Stratification (0-100)
         risk_data = risk_engine.calculate_score(sb_prob, rad_features, unc_data["variance"])
         
-        # 6. Grad-CAM Explainability
-        heatmap = gradcam_engine.generate_heatmap(tensor, target_class=1 if is_sb else 0)
+        # 6. Visual Explainability (ViT Attention vs CNN Grad-CAM)
+        if is_vit or hasattr(model, "get_attention_map"):
+            from explainability.vit_attention import ViTAttentionExplainer
+            vit_explainer = ViTAttentionExplainer(model)
+            rollout_flag = "attention_rollout" if "Rollout" in explain_method else "cls_attention"
+            heatmap = vit_explainer.get_attention_heatmap(tensor, method=rollout_flag)
+        else:
+            heatmap = gradcam_engine.generate_heatmap(tensor, target_class=1 if is_sb else 0)
         vis_suite = generate_explainability_suite(img_resized, img_clahe, heatmap)
         
         # 7. Risk Factor Attribution Decomposition
@@ -218,21 +242,21 @@ def render_page_analyzer():
     c_left, c_right = st.columns([1.1, 1.0])
     
     with c_left:
-        st.markdown("#### 🖼️ Visual Explainability & AI Attention (Grad-CAM)")
+        st.markdown(f"#### 🖼️ Visual Explainability & AI Attention ({explain_method})")
         v_tab1, v_tab2, v_tab3 = st.tabs(["AI Attention Overlay", "Side-by-Side Diagnostic", "CLAHE Enhanced"])
         
         with v_tab1:
-            st.image(vis_suite["overlay_boxed"], caption=f"Grad-CAM Heatmap Overlay | Focus: {vis_suite['focus_data']['anatomical_zone']} (Peak: {vis_suite['focus_data']['peak_intensity']})", use_container_width=True)
+            st.image(vis_suite["overlay_boxed"], caption=f"{explain_method} Overlay | Focus: {vis_suite['focus_data']['anatomical_zone']} (Peak: {vis_suite['focus_data']['peak_intensity']})", use_container_width=True)
         with v_tab2:
             col_orig, col_cam = st.columns(2)
             with col_orig:
                 st.image(vis_suite["original_rgb"], caption="Original Ultrasound Scan", use_container_width=True)
             with col_cam:
-                st.image(vis_suite["heatmap"], caption="Grad-CAM Activation Map", use_container_width=True)
+                st.image(vis_suite["heatmap"], caption=f"{explain_method} Spatial Map", use_container_width=True)
         with v_tab3:
-            st.image(vis_suite["clahe_overlay_rgb"], caption="CLAHE Contrast-Enhanced Ultrasound + Grad-CAM", use_container_width=True)
+            st.image(vis_suite["clahe_overlay_rgb"], caption=f"CLAHE Enhanced Ultrasound + {explain_method}", use_container_width=True)
             
-        st.caption("ℹ️ *AI Attention Map indicates mathematical neural network gradient activation; not a histopathologically confirmed lesion boundary.*")
+        st.caption("ℹ️ *AI Attention Map indicates mathematical neural network gradient/attention activation; not a histopathologically confirmed lesion boundary.*")
         
     with c_right:
         st.markdown("#### 🎯 Risk Gauge & Decision Support Quadrant")

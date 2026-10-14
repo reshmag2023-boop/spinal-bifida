@@ -19,6 +19,7 @@ from preprocessing.feature_extractor import RadiologicalFeatureExtractor
 from models.custom_cnn import SpinaBifidaCNN
 from models.resnet_model import SpinaBifidaResNet
 from models.efficientnet_model import SpinaBifidaEfficientNet
+from models.vit_model import SpinaBifidaViT
 from models.severity_estimator import SeverityEstimator
 from risk.risk_score import SpinaBifidaRiskEngine
 from risk.uncertainty import MonteCarloDropoutEstimator
@@ -28,6 +29,7 @@ from risk.counterfactual import CounterfactualAnalyzer
 from explainability.gradcam import GradCAM, GradCAMPlusPlus
 from explainability.visualizer import generate_explainability_suite
 from explainability.risk_explainer import RiskFactorExplainer
+from explainability.vit_attention import ViTAttentionExplainer
 from reports.pdf_generator import generate_pdf_case_report
 
 @pytest.fixture
@@ -84,6 +86,38 @@ def test_model_forward_passes():
     assert out_res.shape == (2, 2)
     feat_res = resnet.extract_features(dummy_input)
     assert feat_res.shape[0] == 2
+
+def test_vit_model_and_attention():
+    # Fast test of Vision Transformer forward pass, feature extraction, and attention
+    vit = SpinaBifidaViT(pretrained=False)
+    dummy_input = torch.randn(2, 3, 224, 224)
+    
+    # 1. Forward pass
+    out_vit = vit(dummy_input)
+    assert out_vit.shape == (2, 2)
+    
+    # 2. Latent feature extraction ([CLS] embedding)
+    feats = vit.extract_features(dummy_input)
+    assert feats.shape[0] == 2
+    assert feats.shape[1] == vit.embed_dim
+    
+    # 3. MC Dropout activation
+    vit.enable_mc_dropout()
+    
+    # 4. Attention map extraction (14x14 patches)
+    attn_map = vit.get_attention_map(dummy_input)
+    assert attn_map.shape == (2, 14, 14)
+    
+    # 5. ViT Attention Explainer module
+    explainer = ViTAttentionExplainer(vit)
+    single_tensor = dummy_input[:1]
+    heatmap_cls = explainer.get_attention_heatmap(single_tensor, method="cls_attention")
+    assert heatmap_cls.shape == (224, 224)
+    assert 0.0 <= np.min(heatmap_cls) <= np.max(heatmap_cls) <= 1.0
+    
+    heatmap_rollout = explainer.get_attention_heatmap(single_tensor, method="attention_rollout")
+    assert heatmap_rollout.shape == (224, 224)
+    assert 0.0 <= np.min(heatmap_rollout) <= np.max(heatmap_rollout) <= 1.0
 
 def test_severity_estimator():
     estimator = SeverityEstimator()

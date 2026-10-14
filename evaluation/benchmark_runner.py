@@ -69,7 +69,15 @@ def run_all_benchmarks(
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
     
+    # Preserve existing benchmarks if present
+    out_file = ARTIFACTS_DIR / "benchmarks.json"
     benchmark_results = {}
+    if out_file.exists():
+        try:
+            with open(out_file, "r", encoding="utf-8") as f:
+                benchmark_results = json.load(f)
+        except Exception:
+            benchmark_results = {}
     
     for model_name in models_to_run:
         print(f"\n{'='*50}\nBENCHMARKING MODEL: {model_name}\n{'='*50}")
@@ -82,9 +90,9 @@ def run_all_benchmarks(
         elif model_name == "efficientnet_b0":
             model = SpinaBifidaEfficientNet(pretrained=True)
             lr = 1e-4
-        elif model_name == "vit_b_16":
-            model = SpinaBifidaViT(pretrained=True)
-            lr = 1e-4
+        elif model_name in ["vit_transformer", "vit_b_16"]:
+            model = SpinaBifidaViT(pretrained=True, freeze_backbone=True, unfreeze_last_n_blocks=2)
+            lr = 2e-4
         else:
             continue
             
@@ -115,7 +123,6 @@ def run_all_benchmarks(
         print(f"Results for {model_name}: Accuracy={eval_metrics['accuracy']*100:.2f}%, Sensitivity={eval_metrics['sensitivity']*100:.2f}%, Specificity={eval_metrics['specificity']*100:.2f}%, AUC={eval_metrics['roc_auc']:.4f}, Latency={eval_metrics['inference_time_ms']}ms")
         
     # Save to disk
-    out_file = ARTIFACTS_DIR / "benchmarks.json"
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(benchmark_results, f, indent=2)
         

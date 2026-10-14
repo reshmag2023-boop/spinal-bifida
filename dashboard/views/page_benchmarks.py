@@ -29,11 +29,19 @@ def render_page_benchmarks():
     with open(bench_file, "r") as f:
         benchmarks = json.load(f)
         
+    arch_display_names = {
+        "resnet18": "ResNet-18 (Deep Residual CNN)",
+        "custom_cnn": "Custom 4-Layer Medical CNN",
+        "vit_transformer": "Vision Transformer (ViT-16/224)",
+        "vit_b_16": "Vision Transformer (ViT-16/224)",
+        "efficientnet_b0": "EfficientNet-B0 (Compound Scaling)"
+    }
+    
     # Table of Model Comparison
     table_rows = []
     for m_name, data in benchmarks.items():
         table_rows.append({
-            "Architecture": m_name.upper(),
+            "Architecture": arch_display_names.get(m_name, m_name.upper()),
             "Accuracy": f"{data.get('accuracy', 0)*100:.2f}%",
             "Sensitivity (Recall)": f"{data.get('sensitivity', 0)*100:.2f}%",
             "Specificity": f"{data.get('specificity', 0)*100:.2f}%",

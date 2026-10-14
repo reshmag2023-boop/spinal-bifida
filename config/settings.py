@@ -26,7 +26,7 @@ IMG_SIZE = (224, 224)
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
-SUPPORTED_MODELS = ["resnet18", "custom_cnn", "efficientnet_b0", "vit_b_16"]
+SUPPORTED_MODELS = ["resnet18", "vit_transformer", "custom_cnn", "efficientnet_b0", "vit_b_16"]
 DEFAULT_MODEL = "resnet18"
 
 CLASS_NAMES = ["Normal", "Spina_Bifida"]

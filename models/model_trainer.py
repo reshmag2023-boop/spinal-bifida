@@ -26,7 +26,8 @@ def train_model(
     """
     model = model.to(DEVICE)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    trainable_params = [p for p in model.parameters() if p.requires_grad]
+    optimizer = torch.optim.AdamW(trainable_params, lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     
     if save_path is None:
@@ -105,7 +106,7 @@ def train_model(
             torch.save(model.state_dict(), save_path)
             
     total_time = time.time() - start_time
-    print(f"✅ Training completed in {total_time:.1f}s. Best Val Acc: {best_val_acc*100:.2f}%. Saved to {save_path}")
+    print(f"[OK] Training completed in {total_time:.1f}s. Best Val Acc: {best_val_acc*100:.2f}%. Saved to {save_path}")
     
     # Reload best weights
     model.load_state_dict(torch.load(save_path, map_location=DEVICE))
